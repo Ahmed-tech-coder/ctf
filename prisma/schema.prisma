@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Member {
+  id        String   @id @default(uuid())
+  fullName  String
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  progress     ChallengeProgress[]
+  submissions  Submission[]
+  scoreHistory ScoreHistory[]
+
+  @@index([score, createdAt])
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Challenge {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String
+  category    String
+  difficulty  String
+  points      Int
+  maxAttempts Int
+  flagHash    String
+  filePath    String
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  progress     ChallengeProgress[]
+  submissions  Submission[]
+  scoreHistory ScoreHistory[]
+
+  @@index([status, category])
+  @@index([slug])
+}
+
+model ChallengeProgress {
+  id           String    @id @default(uuid())
+  memberId     String
+  challengeId  String
+  attemptsUsed Int       @default(0)
+  solved       Boolean   @default(false)
+  locked       Boolean   @default(false)
+  solvedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, challengeId])
+  @@index([memberId])
+  @@index([challengeId])
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  memberId    String
+  challengeId String
+  result      String
+  submittedAt DateTime @default(now())
+
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, challengeId])
+  @@index([submittedAt])
+}
+
+model ScoreHistory {
+  id          String   @id @default(uuid())
+  memberId    String
+  challengeId String
+  points      Int
+  createdAt   DateTime @default(now())
+
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([challengeId])
+}
