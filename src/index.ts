@@ -13,6 +13,9 @@ import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
+// Trust reverse proxy (Render / Cloudflare) for rate limiting & IP tracking
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
