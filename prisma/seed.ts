@@ -1,31 +1,33 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 const prisma = new PrismaClient();
 
-const FLAG_SALT = process.env.FLAG_SALT || 'ctf-platform-flag-salt-2026';
+const FLAG_SALT = process.env.FLAG_SALT || "ctf-platform-flag-salt-2026";
 
 function hashFlag(flag: string): string {
   return crypto
-    .createHmac('sha256', FLAG_SALT)
+    .createHmac("sha256", FLAG_SALT)
     .update(flag.trim())
-    .digest('hex');
+    .digest("hex");
 }
 
 function createDummyZipBuffer(filename: string, content: string): Buffer {
-  const contentHeader = Buffer.from(`=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`);
+  const contentHeader = Buffer.from(
+    `=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`,
+  );
   return contentHeader;
 }
 
 async function main() {
-  console.log('[SEED] Starting database seeding...');
+  console.log("[SEED] Starting database seeding...");
 
   // 1. Seed Admin
-  const adminEmail = 'admin@ctf.local';
-  const adminPassword = 'AdminPass123!';
+  const adminEmail = "admin@ctf.local";
+  const adminPassword = "AdminPass123!";
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   const admin = await prisma.admin.upsert({
@@ -39,7 +41,7 @@ async function main() {
   console.log(`[SEED] Admin created: ${admin.email}`);
 
   // Ensure local upload storage directory exists
-  const localUploadDir = path.resolve(__dirname, '../uploads/challenges');
+  const localUploadDir = path.resolve(__dirname, "../uploads/challenges");
   if (!fs.existsSync(localUploadDir)) {
     fs.mkdirSync(localUploadDir, { recursive: true });
   }
@@ -55,64 +57,72 @@ async function main() {
   // 2. Seed Sample Challenges
   const sampleChallenges = [
     {
-      title: 'Linux Basics - Foundational Commands',
-      slug: 'linux-basics',
-      description: 'Welcome to your first CTF challenge! Download the challenge archive, extract its contents, and find the hidden flag inside the system metadata file.',
-      category: 'Linux',
-      difficulty: 'EASY',
+      title: "Linux Basics - Foundational Commands",
+      slug: "linux-basics",
+      description:
+        "Welcome to your first CTF challenge! Download the challenge archive, extract its contents, and find the hidden flag inside the system metadata file.",
+      category: "Linux",
+      difficulty: "EASY",
       points: 100,
       maxAttempts: 5,
-      rawFlag: 'CTF{l1nux_b4s1cs_m4st3r_2026}',
-      status: 'PUBLISHED',
-      fileContent: 'Solve: Inspect the file system. Flag is CTF{l1nux_b4s1cs_m4st3r_2026}',
+      rawFlag: "CTF{l1nux_b4s1cs_m4st3r_2026}",
+      status: "PUBLISHED",
+      fileContent:
+        "Solve: Inspect the file system. Flag is CTF{l1nux_b4s1cs_m4st3r_2026}",
     },
     {
-      title: 'Linux File Hunting - Hidden Credentials',
-      slug: 'linux-file-hunting',
-      description: 'A rogue process hid credentials in a nested directory structure. Search through the provided filesystem tree for log files ending in .secret.',
-      category: 'Linux',
-      difficulty: 'MEDIUM',
+      title: "Linux File Hunting - Hidden Credentials",
+      slug: "linux-file-hunting",
+      description:
+        "A rogue process hid credentials in a nested directory structure. Search through the provided filesystem tree for log files ending in .secret.",
+      category: "Linux",
+      difficulty: "MEDIUM",
       points: 200,
       maxAttempts: 3,
-      rawFlag: 'CTF{g3tp_h1dd3n_f1l3s_4291}',
-      status: 'PUBLISHED',
-      fileContent: 'Hint: grep -rnw "." -e "CTF{" to locate the hidden flag: CTF{g3tp_h1dd3n_f1l3s_4291}',
+      rawFlag: "CTF{g3tp_h1dd3n_f1l3s_4291}",
+      status: "PUBLISHED",
+      fileContent:
+        'Hint: grep -rnw "." -e "CTF{" to locate the hidden flag: CTF{g3tp_h1dd3n_f1l3s_4291}',
     },
     {
-      title: 'Linux Permissions & SUID Bits',
-      slug: 'linux-permissions',
-      description: 'Investigate SUID permission misconfigurations on Linux binaries. Determine which binary allows elevated privileges and locate the root flag.',
-      category: 'Linux',
-      difficulty: 'HARD',
+      title: "Linux Permissions & SUID Bits",
+      slug: "linux-permissions",
+      description:
+        "Investigate SUID permission misconfigurations on Linux binaries. Determine which binary allows elevated privileges and locate the root flag.",
+      category: "Linux",
+      difficulty: "HARD",
       points: 300,
       maxAttempts: 3,
-      rawFlag: 'CTF{su1d_pr1v_3sc4l4t10n_9981}',
-      status: 'PUBLISHED',
-      fileContent: 'SUID Challenge: CTF{su1d_pr1v_3sc4l4t10n_9981}',
+      rawFlag: "CTF{su1d_pr1v_3sc4l4t10n_9981}",
+      status: "PUBLISHED",
+      fileContent: "SUID Challenge: CTF{su1d_pr1v_3sc4l4t10n_9981}",
     },
     {
-      title: 'Web Reconnaissance & Comments',
-      slug: 'web-recon',
-      description: 'A web app was archived into this ZIP file. Inspect the static HTML source code comments, header configurations, and developer notes to discover the flag.',
-      category: 'Web',
-      difficulty: 'EASY',
+      title: "Web Reconnaissance & Comments",
+      slug: "web-recon",
+      description:
+        "A web app was archived into this ZIP file. Inspect the static HTML source code comments, header configurations, and developer notes to discover the flag.",
+      category: "Web",
+      difficulty: "EASY",
       points: 150,
       maxAttempts: 4,
-      rawFlag: 'CTF{h1dd3n_1n_html_c0mm3nts_5512}',
-      status: 'PUBLISHED',
-      fileContent: '<!-- Hidden Dev Note: CTF{h1dd3n_1n_html_c0mm3nts_5512} -->',
+      rawFlag: "CTF{h1dd3n_1n_html_c0mm3nts_5512}",
+      status: "PUBLISHED",
+      fileContent:
+        "<!-- Hidden Dev Note: CTF{h1dd3n_1n_html_c0mm3nts_5512} -->",
     },
     {
-      title: 'Basic Base64 Encoding & Cryptography',
-      slug: 'basic-encoding',
-      description: 'The target flag has been multi-encoded using Base64 and Hexadecimal representation. Decode the cipher string provided in cipher.txt.',
-      category: 'Cryptography',
-      difficulty: 'EASY',
+      title: "Basic Base64 Encoding & Cryptography",
+      slug: "basic-encoding",
+      description:
+        "The target flag has been multi-encoded using Base64 and Hexadecimal representation. Decode the cipher string provided in cipher.txt.",
+      category: "Cryptography",
+      difficulty: "EASY",
       points: 100,
       maxAttempts: 5,
-      rawFlag: 'CTF{b4s364_d3c0d3_succ3ss_7719}',
-      status: 'PUBLISHED',
-      fileContent: 'Cipher text: Q1RGe2I0czY0X2QzYzBkM19zdWNjM3NzXzc3MTl9',
+      rawFlag: "CTF{b4s364_d3c0d3_succ3ss_7719}",
+      status: "PUBLISHED",
+      fileContent: "Cipher text: Q1RGe2I0czY0X2QzYzBkM19zdWNjM3NzXzc3MTl9",
     },
   ];
 
@@ -151,15 +161,17 @@ async function main() {
 
   // 3. Seed Sample Members
   const sampleMembers = [
-    { fullName: 'Ahmed Mohamed Ali', score: 450 },
-    { fullName: 'Mohamed Ali Hassan', score: 350 },
-    { fullName: 'Youssef Ahmed Ibrahim', score: 250 },
-    { fullName: 'Laila Mahmoud Reda', score: 100 },
-    { fullName: 'Omar Khaled Said', score: 0 },
+    { fullName: "Ahmed Magdy Rabie", score: 450 },
+    { fullName: "Mohamed Ali Hassan", score: 350 },
+    { fullName: "Youssef Ahmed Ibrahim", score: 250 },
+    { fullName: "Laila Mahmoud Reda", score: 100 },
+    { fullName: "Omar Khaled Said", score: 0 },
   ];
 
   for (const m of sampleMembers) {
-    const existing = await prisma.member.findFirst({ where: { fullName: m.fullName } });
+    const existing = await prisma.member.findFirst({
+      where: { fullName: m.fullName },
+    });
     if (!existing) {
       await prisma.member.create({
         data: {
@@ -171,12 +183,12 @@ async function main() {
   }
   console.log(`[SEED] Seeded ${sampleMembers.length} sample members.`);
 
-  console.log('[SEED] Database seeding complete!');
+  console.log("[SEED] Database seeding complete!");
 }
 
 main()
   .catch((e) => {
-    console.error('[SEED] Error during seeding:', e);
+    console.error("[SEED] Error during seeding:", e);
     process.exit(1);
   })
   .finally(async () => {
