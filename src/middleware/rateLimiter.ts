@@ -7,7 +7,7 @@ export const flagSubmissionLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many flag submission attempts. Please slow down and try again in a minute.',
+    message: 'لقد تجاوزت عدد محاولات إرسال الـ Flag المسموح بها. يرجى الانتظار دقيقة وتكرار المحاولة.',
   },
 });
 
@@ -18,7 +18,7 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many authentication attempts. Please try again later.',
+    message: 'عدد محاولات تسجيل الدخول كثيرة جداً. يرجى الانتظار والمحاولة لاحقاً.',
   },
 });
 
@@ -29,6 +29,6 @@ export const apiGlobalLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'API rate limit exceeded.',
+    message: 'تم تجاوز الحد المسموح به لطلبات الـ API.',
   },
 });

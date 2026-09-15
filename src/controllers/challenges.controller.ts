@@ -6,7 +6,7 @@ import { compareFlag } from '../utils/security';
 import { getChallengeFileStreamOrPath } from '../services/storage';
 
 const submitFlagSchema = z.object({
-  flag: z.string().min(1, 'Flag cannot be empty'),
+  flag: z.string().min(1, 'رمز الـ Flag مطلوب ولا يمكن أن يكون فارغاً'),
 });
 
 const getParamString = (param: string | string[] | undefined): string => {
@@ -96,7 +96,7 @@ export const getChallengeBySlug = async (req: AuthenticatedRequest, res: Respons
   });
 
   if (!challenge) {
-    res.status(404).json({ success: false, message: 'Challenge not found or not published' });
+    res.status(404).json({ success: false, message: 'التحدي المطلوب غير متاح أو غير منشور.' });
     return;
   }
 
@@ -143,7 +143,7 @@ export const downloadChallengeFile = async (req: AuthenticatedRequest, res: Resp
   });
 
   if (!challenge || challenge.status !== 'PUBLISHED') {
-    res.status(404).json({ success: false, message: 'Challenge file not found.' });
+    res.status(404).json({ success: false, message: 'ملف التحدي غير موجود أو التحدي غير متاح.' });
     return;
   }
 
@@ -158,7 +158,7 @@ export const downloadChallengeFile = async (req: AuthenticatedRequest, res: Resp
       res.send(fileResult.data as Buffer);
     }
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message || 'Failed to download challenge file.' });
+    res.status(500).json({ success: false, message: error.message || 'فشل في تحميل ملف التحدي.' });
   }
 };
 
@@ -167,7 +167,7 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
   const memberId = req.user?.id;
 
   if (!memberId) {
-    res.status(401).json({ success: false, message: 'Member authentication required.' });
+    res.status(401).json({ success: false, message: 'تسجيل دخول العضو مطلوب.' });
     return;
   }
 
@@ -179,7 +179,7 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
   });
 
   if (!challenge || challenge.status !== 'PUBLISHED') {
-    res.status(404).json({ success: false, message: 'Challenge not found or unavailable.' });
+    res.status(404).json({ success: false, message: 'التحدي غير موجود أو غير متاح.' });
     return;
   }
 
@@ -208,14 +208,14 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
     if (progress.solved) {
       return {
         status: 'ALREADY_SOLVED',
-        message: 'You have already solved this challenge!',
+        message: 'لقد قمت بحل هذا التحدي مسبقاً!',
       };
     }
 
     if (progress.locked || progress.attemptsUsed >= challenge.maxAttempts) {
       return {
         status: 'LOCKED',
-        message: 'Challenge Locked. You have used all available attempts.',
+        message: 'التحدي مغلق. لقد استنفدت جميع المحاولات المتاحة.',
         attemptsRemaining: 0,
       };
     }
@@ -256,7 +256,7 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
 
       return {
         status: 'CORRECT',
-        message: 'Correct Flag!',
+        message: 'إجابة صحيحة! (Flag الصحيح)',
         pointsEarned: challenge.points,
         newTotalScore: updatedMember.score,
         attemptsRemaining: challenge.maxAttempts - updatedProgress.attemptsUsed,
@@ -286,8 +286,8 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
       return {
         status: isNowLocked ? 'LOCKED' : 'INCORRECT',
         message: isNowLocked
-          ? 'Challenge Locked. You have used all available attempts.'
-          : 'Incorrect Flag. That is not the correct flag.',
+          ? 'التحدي مغلق. لقد استنفدت جميع المحاولات المتاحة.'
+          : 'Flag غير صحيح. يرجى التأكد والمحاولة مرة أخرى.',
         attemptsRemaining,
       };
     }

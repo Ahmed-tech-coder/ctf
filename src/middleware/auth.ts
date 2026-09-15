@@ -16,20 +16,20 @@ export const requireMember = (req: AuthenticatedRequest, res: Response, next: Ne
   }
 
   if (!token) {
-    res.status(401).json({ success: false, message: 'Authentication required. Please register or log in.' });
+    res.status(401).json({ success: false, message: 'تسجيل الدخول مطلوب. يرجى تسجيل حساب أولاً.' });
     return;
   }
 
   try {
     const decoded = verifyMemberToken(token);
     if (decoded.role !== 'MEMBER') {
-      res.status(403).json({ success: false, message: 'Access denied. Member privileges required.' });
+      res.status(403).json({ success: false, message: 'تم رفض الوصول. صلاحيات عضو مطلوبة.' });
       return;
     }
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid or expired session token.' });
+    res.status(401).json({ success: false, message: 'رمز الجلسة غير صالح أو منتهي الصلاحية.' });
     return;
   }
 };
@@ -45,20 +45,20 @@ export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: Nex
   }
 
   if (!token) {
-    res.status(401).json({ success: false, message: 'Admin authentication required.' });
+    res.status(401).json({ success: false, message: 'تسجيل دخول المسؤول مطلوب.' });
     return;
   }
 
   try {
     const decoded = verifyAdminToken(token);
     if (decoded.role !== 'ADMIN') {
-      res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+      res.status(403).json({ success: false, message: 'تم رفض الوصول. صلاحيات مسؤول مطلوبة.' });
       return;
     }
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid or expired admin session token.' });
+    res.status(401).json({ success: false, message: 'رمز جلسة المسؤول غير صالح أو منتهي الصلاحية.' });
     return;
   }
 };

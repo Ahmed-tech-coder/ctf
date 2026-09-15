@@ -11,17 +11,17 @@ import {
 const memberRegisterSchema = z.object({
   fullName: z
     .string()
-    .min(3, 'Full name must be at least 3 characters')
-    .max(100, 'Full name is too long')
+    .min(3, 'الاسم يجب أن لا يقل عن 3 أحرف')
+    .max(100, 'الاسم طويل جداً')
     .refine((val) => {
       const parts = val.trim().split(/\s+/);
       return parts.length >= 3;
-    }, 'Full name must consist of at least three parts (First Middle Last name).'),
+    }, 'يجب أن يتكون الاسم الكامل من 3 أجزاء على الأقل (الاسم الأول والأوسط والعائلة).'),
 });
 
 const adminLoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('البريد الإلكتروني غير صحيح'),
+  password: z.string().min(6, 'كلمة المرور يجب أن لا تقل عن 6 أحرف'),
 });
 
 export const registerMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -39,7 +39,7 @@ export const registerMember = async (req: AuthenticatedRequest, res: Response): 
 
   res.status(201).json({
     success: true,
-    message: 'Registration successful',
+    message: 'تم التسجيل بنجاح',
     token,
     member: {
       id: member.id,
@@ -53,7 +53,7 @@ export const registerMember = async (req: AuthenticatedRequest, res: Response): 
 export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const memberId = req.user?.id;
   if (!memberId) {
-    res.status(401).json({ success: false, message: 'Unauthorized' });
+    res.status(401).json({ success: false, message: 'غير مصرح به' });
     return;
   }
 
@@ -62,7 +62,7 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
   });
 
   if (!member) {
-    res.status(404).json({ success: false, message: 'Member not found' });
+    res.status(404).json({ success: false, message: 'العضو غير موجود' });
     return;
   }
 
@@ -154,13 +154,13 @@ export const adminLogin = async (req: AuthenticatedRequest, res: Response): Prom
   });
 
   if (!admin) {
-    res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+    res.status(401).json({ success: false, message: 'بيانات دخول المسؤول غير صحيحة' });
     return;
   }
 
   const isValidPassword = await comparePassword(password, admin.passwordHash);
   if (!isValidPassword) {
-    res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+    res.status(401).json({ success: false, message: 'بيانات دخول المسؤول غير صحيحة' });
     return;
   }
 
@@ -168,7 +168,7 @@ export const adminLogin = async (req: AuthenticatedRequest, res: Response): Prom
 
   res.json({
     success: true,
-    message: 'Admin login successful',
+    message: 'تم تسجيل دخول المسؤول بنجاح',
     token,
     admin: {
       id: admin.id,
