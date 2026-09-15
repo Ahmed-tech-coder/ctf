@@ -8,9 +8,8 @@ import { uploadChallengeFile } from '../services/storage';
 
 const createChallengeSchema = z.object({
   title: z.string().min(2, 'Title is required'),
-  description: z.string().min(5, 'Description is required'),
+  description: z.string().optional().default(''),
   category: z.string().min(2, 'Category is required'),
-  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'EXPERT']),
   points: z.coerce.number().int().positive('Points must be a positive integer'),
   maxAttempts: z.coerce.number().int().positive('Max attempts must be a positive integer'),
   flag: z.string().min(1, 'Flag is required'),
@@ -28,63 +27,79 @@ export const getAdminDashboard = async (req: AuthenticatedRequest, res: Response
   const totalSubmissions = await prisma.submission.count();
   const totalIncorrectAttempts = await prisma.submission.count({ where: { result: 'INCORRECT' } });
 
-  const avgScoreAggregate = await prisma.member.aggregate({
+  const scoreAggregate = await prisma.member.aggregate({
     _avg: { score: true },
   });
-  const averageScore = Math.round(avgScoreAggregate._avg.score || 0);
+  const averageScore = Math.round(scoreAggregate._avg.score || 0);
 
-  // Recent Submissions (last 10)
   const recentSubmissions = await prisma.submission.findMany({
-    take: 10,
-    orderBy: { submittedAt: 'desc' },
     include: {
       member: { select: { id: true, fullName: true } },
       challenge: { select: { id: true, title: true, points: true } },
     },
+    orderBy: { submittedAt: 'desc' },
+    take: 10,
   });
 
-  // Top 5 Members
   const topMembers = await prisma.member.findMany({
-    take: 5,
-    orderBy: { score: 'desc' },
     select: { id: true, fullName: true, score: true },
+    orderBy: { score: 'desc' },
+    take: 5,
   });
 
-  // Most Solved Challenges
   const challengesWithSolves = await prisma.challenge.findMany({
     select: {
       id: true,
       title: true,
       category: true,
-      difficulty: true,
       points: true,
       status: true,
-      submissions: {
-        where: { result: 'CORRECT' },
+      _count: {
+        select: {
+          submissions: {
+            where: { result: 'CORRECT' },
+          },
+        },
       },
     },
+    take: 10,
   });
 
-  const mostSolved = [...challengesWithSolves]
-    .map((c) => ({ ...c, solvesCount: c.submissions.length }))
+  const mostSolved = challengesWithSolves
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      category: c.category,
+      points: c.points,
+      status: c.status,
+      solvesCount: c._count.submissions,
+    }))
     .sort((a, b) => b.solvesCount - a.solvesCount)
     .slice(0, 5);
 
-  // Most Failed Challenges
-  const challengesWithFailures = await prisma.challenge.findMany({
+  const challengesWithIncorrect = await prisma.challenge.findMany({
     select: {
       id: true,
       title: true,
       category: true,
-      difficulty: true,
-      submissions: {
-        where: { result: 'INCORRECT' },
+      _count: {
+        select: {
+          submissions: {
+            where: { result: 'INCORRECT' },
+          },
+        },
       },
     },
+    take: 10,
   });
 
-  const mostFailed = [...challengesWithFailures]
-    .map((c) => ({ ...c, incorrectCount: c.submissions.length }))
+  const mostFailed = challengesWithIncorrect
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      category: c.category,
+      incorrectCount: c._count.submissions,
+    }))
     .sort((a, b) => b.incorrectCount - a.incorrectCount)
     .slice(0, 5);
 
@@ -107,44 +122,40 @@ export const getAdminDashboard = async (req: AuthenticatedRequest, res: Response
 
 export const getAdminChallenges = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const challenges = await prisma.challenge.findMany({
-    orderBy: { createdAt: 'desc' },
     include: {
-      submissions: {
-        select: { result: true },
+      _count: {
+        select: {
+          progress: { where: { solved: true } },
+          submissions: true,
+        },
       },
-      progress: {
-        where: { solved: true },
+      submissions: {
+        where: { result: 'INCORRECT' },
         select: { id: true },
       },
     },
+    orderBy: { createdAt: 'desc' },
   });
 
-  const result = challenges.map((ch) => {
-    const solvesCount = ch.progress.length;
-    const totalSubmissions = ch.submissions.length;
-    const incorrectSubmissions = ch.submissions.filter((s) => s.result === 'INCORRECT').length;
-
-    return {
-      id: ch.id,
-      title: ch.title,
-      slug: ch.slug,
-      description: ch.description,
-      category: ch.category,
-      difficulty: ch.difficulty,
-      points: ch.points,
-      maxAttempts: ch.maxAttempts,
-      filePath: ch.filePath,
-      status: ch.status,
-      solvesCount,
-      totalSubmissions,
-      incorrectSubmissions,
-      createdAt: ch.createdAt,
-    };
-  });
+  const formatted = challenges.map((c) => ({
+    id: c.id,
+    title: c.title,
+    slug: c.slug,
+    description: c.description,
+    category: c.category,
+    points: c.points,
+    maxAttempts: c.maxAttempts,
+    filePath: c.filePath,
+    status: c.status,
+    createdAt: c.createdAt,
+    solvesCount: c._count.progress,
+    totalSubmissions: c._count.submissions,
+    incorrectSubmissions: c.submissions.length,
+  }));
 
   res.json({
     success: true,
-    challenges: result,
+    challenges: formatted,
   });
 };
 
@@ -155,7 +166,6 @@ export const createChallenge = async (req: AuthenticatedRequest, res: Response):
   }
 
   const data = createChallengeSchema.parse(req.body);
-
   const uploadResult = await uploadChallengeFile(req.file);
 
   let slug = slugify(data.title, { lower: true, strict: true });
@@ -170,30 +180,29 @@ export const createChallenge = async (req: AuthenticatedRequest, res: Response):
     data: {
       title: data.title,
       slug,
-      description: data.description,
+      description: data.description ?? '',
       category: data.category,
-      difficulty: data.difficulty,
       points: data.points,
       maxAttempts: data.maxAttempts,
       flagHash,
       filePath: uploadResult.filePath,
       status: data.status,
     },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      category: true,
+      points: true,
+      maxAttempts: true,
+      status: true,
+    },
   });
 
   res.status(201).json({
     success: true,
     message: 'Challenge created successfully.',
-    challenge: {
-      id: challenge.id,
-      title: challenge.title,
-      slug: challenge.slug,
-      category: challenge.category,
-      difficulty: challenge.difficulty,
-      points: challenge.points,
-      maxAttempts: challenge.maxAttempts,
-      status: challenge.status,
-    },
+    challenge,
   });
 };
 
@@ -221,6 +230,12 @@ export const updateChallenge = async (req: AuthenticatedRequest, res: Response):
   let slug = existing.slug;
   if (data.title && data.title !== existing.title) {
     slug = slugify(data.title, { lower: true, strict: true });
+    const slugCheck = await prisma.challenge.findFirst({
+      where: { slug, id: { not: id } },
+    });
+    if (slugCheck) {
+      slug = `${slug}-${Date.now().toString().slice(-4)}`;
+    }
   }
 
   const updated = await prisma.challenge.update({
@@ -230,7 +245,6 @@ export const updateChallenge = async (req: AuthenticatedRequest, res: Response):
       slug,
       description: data.description ?? existing.description,
       category: data.category ?? existing.category,
-      difficulty: data.difficulty ?? existing.difficulty,
       points: data.points ?? existing.points,
       maxAttempts: data.maxAttempts ?? existing.maxAttempts,
       status: data.status ?? existing.status,
@@ -266,6 +280,12 @@ export const deleteChallenge = async (req: AuthenticatedRequest, res: Response):
 export const publishChallenge = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
+  const existing = await prisma.challenge.findUnique({ where: { id } });
+  if (!existing) {
+    res.status(404).json({ success: false, message: 'Challenge not found' });
+    return;
+  }
+
   const challenge = await prisma.challenge.update({
     where: { id },
     data: { status: 'PUBLISHED' },
@@ -281,6 +301,12 @@ export const publishChallenge = async (req: AuthenticatedRequest, res: Response)
 export const unpublishChallenge = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
+  const existing = await prisma.challenge.findUnique({ where: { id } });
+  if (!existing) {
+    res.status(404).json({ success: false, message: 'Challenge not found' });
+    return;
+  }
+
   const challenge = await prisma.challenge.update({
     where: { id },
     data: { status: 'DRAFT' },
@@ -295,40 +321,39 @@ export const unpublishChallenge = async (req: AuthenticatedRequest, res: Respons
 
 export const getAdminMembers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const members = await prisma.member.findMany({
-    orderBy: { score: 'desc' },
     include: {
-      progress: {
-        where: { solved: true },
-        select: { id: true },
-      },
-      submissions: {
-        select: { id: true },
+      _count: {
+        select: {
+          progress: { where: { solved: true } },
+          submissions: true,
+        },
       },
     },
+    orderBy: { score: 'desc' },
   });
 
-  const result = members.map((m) => ({
+  const formatted = members.map((m) => ({
     id: m.id,
     fullName: m.fullName,
     score: m.score,
-    solvedCount: m.progress.length,
-    totalSubmissions: m.submissions.length,
     createdAt: m.createdAt,
+    solvedCount: m._count.progress,
+    totalSubmissions: m._count.submissions,
   }));
 
   res.json({
     success: true,
-    members: result,
+    members: formatted,
   });
 };
 
 export const getAdminSubmissions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const submissions = await prisma.submission.findMany({
-    orderBy: { submittedAt: 'desc' },
     include: {
       member: { select: { id: true, fullName: true } },
       challenge: { select: { id: true, title: true, points: true, category: true } },
     },
+    orderBy: { submittedAt: 'desc' },
   });
 
   res.json({

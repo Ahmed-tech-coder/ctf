@@ -25,7 +25,6 @@ export const getChallenges = async (req: AuthenticatedRequest, res: Response): P
       slug: true,
       description: true,
       category: true,
-      difficulty: true,
       points: true,
       maxAttempts: true,
       createdAt: true,
@@ -37,6 +36,7 @@ export const getChallenges = async (req: AuthenticatedRequest, res: Response): P
   if (memberId) {
     const progressList = await prisma.challengeProgress.findMany({
       where: { memberId },
+      select: { challengeId: true, attemptsUsed: true, solved: true, locked: true },
     });
     progressList.forEach((p) => {
       memberProgressMap.set(p.challengeId, {
@@ -80,15 +80,14 @@ export const getChallengeBySlug = async (req: AuthenticatedRequest, res: Respons
   const slug = getParamString(req.params.slug);
   const memberId = req.user?.id;
 
-  const challenge = await prisma.challenge.findUnique({
-    where: { slug },
+  const challenge = await prisma.challenge.findFirst({
+    where: { slug, status: 'PUBLISHED' },
     select: {
       id: true,
       title: true,
       slug: true,
       description: true,
       category: true,
-      difficulty: true,
       points: true,
       maxAttempts: true,
       status: true,
@@ -96,7 +95,7 @@ export const getChallengeBySlug = async (req: AuthenticatedRequest, res: Respons
     },
   });
 
-  if (!challenge || challenge.status !== 'PUBLISHED') {
+  if (!challenge) {
     res.status(404).json({ success: false, message: 'Challenge not found or not published' });
     return;
   }
@@ -110,6 +109,7 @@ export const getChallengeBySlug = async (req: AuthenticatedRequest, res: Respons
           challengeId: challenge.id,
         },
       },
+      select: { attemptsUsed: true, solved: true, locked: true },
     });
 
     const attemptsUsed = prog ? prog.attemptsUsed : 0;
@@ -139,6 +139,7 @@ export const downloadChallengeFile = async (req: AuthenticatedRequest, res: Resp
 
   const challenge = await prisma.challenge.findUnique({
     where: { id },
+    select: { id: true, slug: true, filePath: true, status: true },
   });
 
   if (!challenge || challenge.status !== 'PUBLISHED') {
@@ -174,6 +175,7 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
 
   const challenge = await prisma.challenge.findUnique({
     where: { id: challengeId },
+    select: { id: true, points: true, maxAttempts: true, flagHash: true, status: true },
   });
 
   if (!challenge || challenge.status !== 'PUBLISHED') {
@@ -283,7 +285,9 @@ export const submitFlag = async (req: AuthenticatedRequest, res: Response): Prom
 
       return {
         status: isNowLocked ? 'LOCKED' : 'INCORRECT',
-        message: isNowLocked ? 'Challenge Locked. You have used all available attempts.' : 'Incorrect Flag. That is not the correct flag.',
+        message: isNowLocked
+          ? 'Challenge Locked. You have used all available attempts.'
+          : 'Incorrect Flag. That is not the correct flag.',
         attemptsRemaining,
       };
     }

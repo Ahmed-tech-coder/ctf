@@ -5,7 +5,6 @@ import fs from "fs";
 import path from "path";
 
 const prisma = new PrismaClient();
-
 const FLAG_SALT = process.env.FLAG_SALT || "ctf-platform-flag-salt-2026";
 
 function hashFlag(flag: string): string {
@@ -17,20 +16,20 @@ function hashFlag(flag: string): string {
 
 function createDummyZipBuffer(filename: string, content: string): Buffer {
   const contentHeader = Buffer.from(
-    `=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`,
+    `=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`
   );
   return contentHeader;
 }
 
 async function main() {
-  console.log("[SEED] Starting database seeding...");
+  console.log("[SEED] Starting database seeding via Prisma...");
 
   // 1. Seed Admin
   const adminEmail = "admin@ctf.local";
   const adminPassword = "AdminPass123!";
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-  const admin = await prisma.admin.upsert({
+  await prisma.admin.upsert({
     where: { email: adminEmail },
     update: { passwordHash },
     create: {
@@ -38,7 +37,7 @@ async function main() {
       passwordHash,
     },
   });
-  console.log(`[SEED] Admin created: ${admin.email}`);
+  console.log(`[SEED] Admin created/updated: ${adminEmail}`);
 
   // Ensure local upload storage directory exists
   const localUploadDir = path.resolve(__dirname, "../uploads/challenges");
@@ -62,7 +61,6 @@ async function main() {
       description:
         "Welcome to your first CTF challenge! Download the challenge archive, extract its contents, and find the hidden flag inside the system metadata file.",
       category: "Linux",
-      difficulty: "EASY",
       points: 100,
       maxAttempts: 5,
       rawFlag: "CTF{l1nux_b4s1cs_m4st3r_2026}",
@@ -76,7 +74,6 @@ async function main() {
       description:
         "A rogue process hid credentials in a nested directory structure. Search through the provided filesystem tree for log files ending in .secret.",
       category: "Linux",
-      difficulty: "MEDIUM",
       points: 200,
       maxAttempts: 3,
       rawFlag: "CTF{g3tp_h1dd3n_f1l3s_4291}",
@@ -90,7 +87,6 @@ async function main() {
       description:
         "Investigate SUID permission misconfigurations on Linux binaries. Determine which binary allows elevated privileges and locate the root flag.",
       category: "Linux",
-      difficulty: "HARD",
       points: 300,
       maxAttempts: 3,
       rawFlag: "CTF{su1d_pr1v_3sc4l4t10n_9981}",
@@ -103,7 +99,6 @@ async function main() {
       description:
         "A web app was archived into this ZIP file. Inspect the static HTML source code comments, header configurations, and developer notes to discover the flag.",
       category: "Web",
-      difficulty: "EASY",
       points: 150,
       maxAttempts: 4,
       rawFlag: "CTF{h1dd3n_1n_html_c0mm3nts_5512}",
@@ -117,7 +112,6 @@ async function main() {
       description:
         "The target flag has been multi-encoded using Base64 and Hexadecimal representation. Decode the cipher string provided in cipher.txt.",
       category: "Cryptography",
-      difficulty: "EASY",
       points: 100,
       maxAttempts: 5,
       rawFlag: "CTF{b4s364_d3c0d3_succ3ss_7719}",
@@ -136,7 +130,6 @@ async function main() {
         title: c.title,
         description: c.description,
         category: c.category,
-        difficulty: c.difficulty,
         points: c.points,
         maxAttempts: c.maxAttempts,
         flagHash,
@@ -148,7 +141,6 @@ async function main() {
         slug: c.slug,
         description: c.description,
         category: c.category,
-        difficulty: c.difficulty,
         points: c.points,
         maxAttempts: c.maxAttempts,
         flagHash,

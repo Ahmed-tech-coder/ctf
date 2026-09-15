@@ -51,9 +51,8 @@ model Challenge {
   id          String          @id @default(uuid())
   title       String
   slug        String          @unique
-  description String
+  description String?         @default("")
   category    String
-  difficulty  Difficulty
   points      Int
   maxAttempts Int
   flagHash    String

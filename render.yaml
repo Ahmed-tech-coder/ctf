@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: ctf-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: FLAG_SALT
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://ctf-six-iota.vercel.app

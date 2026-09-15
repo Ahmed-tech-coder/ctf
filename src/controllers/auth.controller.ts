@@ -26,10 +26,8 @@ const adminLoginSchema = z.object({
 
 export const registerMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { fullName } = memberRegisterSchema.parse(req.body);
-
   const cleanName = fullName.trim().replace(/\s+/g, ' ');
 
-  // Create member
   const member = await prisma.member.create({
     data: {
       fullName: cleanName,
@@ -61,35 +59,6 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
-    include: {
-      progress: {
-        include: {
-          challenge: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              category: true,
-              difficulty: true,
-              points: true,
-            },
-          },
-        },
-      },
-      submissions: {
-        orderBy: { submittedAt: 'desc' },
-        take: 10,
-        include: {
-          challenge: {
-            select: {
-              id: true,
-              title: true,
-              points: true,
-            },
-          },
-        },
-      },
-    },
   });
 
   if (!member) {
@@ -97,15 +66,48 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
     return;
   }
 
-  // Calculate Rank
-  // Sort order: score DESC, createdAt ASC
+  // Fetch progress with challenge details
+  const progressRows = await prisma.challengeProgress.findMany({
+    where: { memberId },
+    include: {
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          category: true,
+          points: true,
+        },
+      },
+    },
+  });
+
+  // Fetch recent submissions with challenge details
+  const recentSubmissions = await prisma.submission.findMany({
+    where: { memberId },
+    include: {
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          points: true,
+        },
+      },
+    },
+    orderBy: { submittedAt: 'desc' },
+    take: 10,
+  });
+
+  // Calculate Rank (score DESC, createdAt ASC)
   const higherRankCount = await prisma.member.count({
     where: {
       OR: [
         { score: { gt: member.score } },
         {
-          score: member.score,
-          createdAt: { lt: member.createdAt },
+          AND: [
+            { score: member.score },
+            { createdAt: { lt: member.createdAt } },
+          ],
         },
       ],
     },
@@ -113,16 +115,14 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
 
   const rank = higherRankCount + 1;
 
-  // Published challenges count
-  const totalPublishedChallenges = await prisma.challenge.count({
+  // Total published challenges count
+  const totalPub = await prisma.challenge.count({
     where: { status: 'PUBLISHED' },
   });
 
-  const solvedCount = member.progress.filter((p) => p.solved).length;
+  const solvedCount = progressRows.filter((p) => p.solved).length;
   const progressPercentage =
-    totalPublishedChallenges > 0
-      ? Math.round((solvedCount / totalPublishedChallenges) * 100)
-      : 0;
+    totalPub > 0 ? Math.round((solvedCount / totalPub) * 100) : 0;
 
   res.json({
     success: true,
@@ -132,10 +132,10 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
       score: member.score,
       rank,
       solvedCount,
-      totalChallenges: totalPublishedChallenges,
+      totalChallenges: totalPub,
       progressPercentage,
-      progress: member.progress,
-      recentSubmissions: member.submissions,
+      progress: progressRows,
+      recentSubmissions,
       createdAt: member.createdAt,
     },
   });
@@ -144,8 +144,13 @@ export const getMemberMe = async (req: AuthenticatedRequest, res: Response): Pro
 export const adminLogin = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { email, password } = adminLoginSchema.parse(req.body);
 
-  const admin = await prisma.admin.findUnique({
-    where: { email: email.toLowerCase().trim() },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      email: {
+        equals: email.trim(),
+        mode: 'insensitive',
+      },
+    },
   });
 
   if (!admin) {

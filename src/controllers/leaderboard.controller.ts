@@ -3,11 +3,7 @@ import { prisma } from '../services/prisma';
 
 export const getLeaderboard = async (req: Request, res: Response): Promise<void> => {
   const members = await prisma.member.findMany({
-    select: {
-      id: true,
-      fullName: true,
-      score: true,
-      createdAt: true,
+    include: {
       progress: {
         where: { solved: true },
         select: { id: true, solvedAt: true },
@@ -19,16 +15,13 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
     ],
   });
 
-  // Map and sort members according to:
-  // 1. Score DESC
-  // 2. Solved challenges DESC
-  // 3. Earliest solvedAt / createdAt ASC
   const formattedLeaderboard = members.map((m) => {
     const solvedCount = m.progress.length;
-    // Find latest solvedAt timestamp if any
+
     const lastSolvedAt = m.progress.reduce<Date | null>((latest, p) => {
       if (!p.solvedAt) return latest;
-      if (!latest || p.solvedAt > latest) return p.solvedAt;
+      const solvedDate = new Date(p.solvedAt);
+      if (!latest || solvedDate > latest) return solvedDate;
       return latest;
     }, null);
 
@@ -50,7 +43,6 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
     return timeA - timeB;
   });
 
-  // Assign ranks
   const ranked = formattedLeaderboard.map((item, index) => ({
     rank: index + 1,
     ...item,
