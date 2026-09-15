@@ -16,7 +16,7 @@ function hashFlag(flag: string): string {
 
 function createDummyZipBuffer(filename: string, content: string): Buffer {
   const contentHeader = Buffer.from(
-    `=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`
+    `=== CTF CHALLENGE ARCHIVE ===\nFile: ${filename}\n\nHint: ${content}\n`,
   );
   return contentHeader;
 }
