@@ -28,18 +28,31 @@ export const registerMember = async (req: AuthenticatedRequest, res: Response): 
   const { fullName } = memberRegisterSchema.parse(req.body);
   const cleanName = fullName.trim().replace(/\s+/g, ' ');
 
-  const member = await prisma.member.create({
-    data: {
-      fullName: cleanName,
-      score: 0,
+  // Check if a member with this name already exists (case-insensitive)
+  let member = await prisma.member.findFirst({
+    where: {
+      fullName: {
+        equals: cleanName,
+        mode: 'insensitive',
+      },
     },
+    orderBy: { createdAt: 'asc' },
   });
+
+  if (!member) {
+    member = await prisma.member.create({
+      data: {
+        fullName: cleanName,
+        score: 0,
+      },
+    });
+  }
 
   const token = signMemberToken(member);
 
-  res.status(201).json({
+  res.status(200).json({
     success: true,
-    message: 'تم التسجيل بنجاح',
+    message: 'تم الدخول بنجاح',
     token,
     member: {
       id: member.id,
