@@ -139,7 +139,7 @@ export const downloadChallengeFile = async (req: AuthenticatedRequest, res: Resp
 
   const challenge = await prisma.challenge.findUnique({
     where: { id },
-    select: { id: true, slug: true, filePath: true, status: true },
+    select: { id: true, slug: true, filePath: true, fileData: true, status: true },
   });
 
   if (!challenge || challenge.status !== 'PUBLISHED') {
@@ -148,6 +148,13 @@ export const downloadChallengeFile = async (req: AuthenticatedRequest, res: Resp
   }
 
   try {
+    if (challenge.fileData && challenge.fileData.length > 0) {
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${challenge.slug}_challenge.zip"`);
+      res.send(Buffer.from(challenge.fileData));
+      return;
+    }
+
     const fileResult = await getChallengeFileStreamOrPath(challenge.filePath);
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${challenge.slug}_challenge.zip"`);

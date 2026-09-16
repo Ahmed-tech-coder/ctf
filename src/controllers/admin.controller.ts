@@ -186,6 +186,7 @@ export const createChallenge = async (req: AuthenticatedRequest, res: Response):
       maxAttempts: data.maxAttempts,
       flagHash,
       filePath: uploadResult.filePath,
+      fileData: uploadResult.fileBuffer,
       status: data.status,
     },
     select: {
@@ -217,9 +218,11 @@ export const updateChallenge = async (req: AuthenticatedRequest, res: Response):
   }
 
   let filePath = existing.filePath;
+  let fileData = existing.fileData;
   if (req.file) {
     const uploadResult = await uploadChallengeFile(req.file);
     filePath = uploadResult.filePath;
+    fileData = uploadResult.fileBuffer;
   }
 
   let flagHash = existing.flagHash;
@@ -250,6 +253,7 @@ export const updateChallenge = async (req: AuthenticatedRequest, res: Response):
       status: data.status ?? existing.status,
       flagHash,
       filePath,
+      fileData,
     },
   });
 

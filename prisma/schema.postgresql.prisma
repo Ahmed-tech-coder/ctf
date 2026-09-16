@@ -57,6 +57,7 @@ model Challenge {
   maxAttempts Int
   flagHash    String
   filePath    String
+  fileData    Bytes?
   status      ChallengeStatus @default(DRAFT)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
