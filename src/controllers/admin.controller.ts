@@ -361,3 +361,31 @@ export const getAdminSubmissions = async (req: AuthenticatedRequest, res: Respon
     submissions,
   });
 };
+
+export const deleteAdminMember = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const member = await prisma.member.findUnique({ where: { id } });
+  if (!member) {
+    res.status(404).json({ success: false, message: 'Member not found' });
+    return;
+  }
+
+  await prisma.member.delete({ where: { id } });
+
+  res.json({
+    success: true,
+    message: 'Member deleted successfully.',
+  });
+};
+
+export const deleteAllAdminMembers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const result = await prisma.member.deleteMany();
+
+  res.json({
+    success: true,
+    message: 'All members deleted successfully.',
+    count: result.count,
+  });
+};
+

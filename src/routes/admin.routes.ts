@@ -10,6 +10,8 @@ import {
   publishChallenge,
   unpublishChallenge,
   getAdminMembers,
+  deleteAdminMember,
+  deleteAllAdminMembers,
   getAdminSubmissions,
 } from '../controllers/admin.controller';
 import { requireAdmin } from '../middleware/auth';
@@ -41,6 +43,9 @@ router.delete('/challenges/:id', requireAdmin, deleteChallenge);
 router.post('/challenges/:id/publish', requireAdmin, publishChallenge);
 router.post('/challenges/:id/unpublish', requireAdmin, unpublishChallenge);
 router.get('/members', requireAdmin, getAdminMembers);
+router.delete('/members', requireAdmin, deleteAllAdminMembers);
+router.delete('/members/:id', requireAdmin, deleteAdminMember);
 router.get('/submissions', requireAdmin, getAdminSubmissions);
+
 
 export default router;
